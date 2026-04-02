@@ -18,8 +18,9 @@ The app focuses on:
 ### Core
 
 - Track menstrual cycle (start and end dates)
-- Log sexual activity with optional notes
+- Log sexual activity with protection type (protected/unprotected) and optional notes
 - Predict next period based on previous cycles
+- Light and dark theme support
 
 ### Notifications
 
@@ -30,15 +31,15 @@ The app focuses on:
 
 - Symptom tracking (cramps, fatigue, etc.)
 - Mood tracking
-- Calendar-based cycle visualization
-- Privacy lock (PIN / biometric)
+- Calendar-based cycle visualization with color-coded indicators
+- Today dashboard with cycle phase, stats, and daily logs
 
 ---
 
 ## 🧱 Tech Stack
 
 - **Frontend:** Flutter
-- **Local Database:** Hive or SQLite
+- **Local Database:** Hive
 - **Notifications:** flutter_local_notifications
 - **Optional Backend:** Supabase / Firebase
 
@@ -72,18 +73,15 @@ flutter run
 
 ---
 
-## 📁 Project Structure (Suggested)
+## 📁 Project Structure
 
 ```
 lib/
-  core/
-  features/
-    cycle/
-    logs/
-    notifications/
-  services/
-  models/
-  screens/
+  core/           # Theme, shared constants
+  features/       # Feature-specific logic (cycle, logs, notifications)
+  models/         # Hive data models (Period, Cycle, LogEntry, SexualActivityLog, NotificationSettings)
+  screens/        # UI screens (Today, Calendar, Log, LogEntry, Settings, AppShell)
+  services/       # Storage, notifications, cycle prediction
 ```
 
 ---
@@ -100,16 +98,20 @@ lib/
 
 ### MVP
 
-- [ ] Period tracking
-- [ ] Prediction logic
-- [ ] Local notifications
-- [ ] Calendar UI
+- [x] Period tracking
+- [x] Prediction logic
+- [x] Local notifications
+- [x] Calendar UI
+- [x] Symptom and mood logging
+- [x] Sexual activity logging (protection type + notes)
+- [x] Light/dark theme
 
 ### V2
 
 - [ ] Cloud sync
 - [ ] Partner sharing
 - [ ] Advanced analytics
+- [ ] Privacy lock (PIN / biometric)
 
 ---
 

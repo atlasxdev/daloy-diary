@@ -5,6 +5,7 @@ import '../core/theme.dart';
 import '../models/period.dart';
 import '../models/cycle.dart';
 import '../models/log_entry.dart';
+import '../models/sexual_activity_log.dart';
 import '../services/storage_service.dart';
 import '../services/cycle_prediction_service.dart';
 
@@ -33,6 +34,7 @@ class _TodayScreenState extends State<TodayScreen> {
     final cycles = _storage.getAllCycles();
     final today = DateTime.now();
     final todayLogs = _storage.getLogsForDate(today);
+    final todayActivity = _storage.getSexualActivityForDate(today);
 
     return Scaffold(
       appBar: AppBar(
@@ -42,7 +44,7 @@ class _TodayScreenState extends State<TodayScreen> {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         child: periods.isEmpty
             ? _buildEmptyState(context)
-            : _buildDashboard(context, periods, cycles, todayLogs),
+            : _buildDashboard(context, periods, cycles, todayLogs, todayActivity),
       ),
     );
   }
@@ -91,6 +93,7 @@ class _TodayScreenState extends State<TodayScreen> {
     List<Period> periods,
     List<Cycle> cycles,
     List<LogEntry> todayLogs,
+    SexualActivityLog? todayActivity,
   ) {
     final today = _dateOnly(DateTime.now());
     final latestPeriod = periods.first;
@@ -154,7 +157,7 @@ class _TodayScreenState extends State<TodayScreen> {
         const SizedBox(height: 16),
 
         // ── Today's logs ──
-        _buildTodayLogs(context, todayLogs),
+        _buildTodayLogs(context, todayLogs, todayActivity),
       ],
     );
   }
@@ -384,7 +387,7 @@ class _TodayScreenState extends State<TodayScreen> {
 
   // ── Today's logs section ─────────────────────────────────────
 
-  Widget _buildTodayLogs(BuildContext context, List<LogEntry> logs) {
+  Widget _buildTodayLogs(BuildContext context, List<LogEntry> logs, SexualActivityLog? activity) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -403,7 +406,7 @@ class _TodayScreenState extends State<TodayScreen> {
             ),
           ),
         ),
-        if (logs.isEmpty)
+        if (logs.isEmpty && activity == null)
           Card(
             child: Padding(
               padding: const EdgeInsets.all(20),
@@ -431,6 +434,8 @@ class _TodayScreenState extends State<TodayScreen> {
                 children: [
                   for (final log in logs)
                     _buildLogRow(context, log),
+                  if (activity != null)
+                    _buildActivityRow(context, activity),
                 ],
               ),
             ),
@@ -481,6 +486,55 @@ class _TodayScreenState extends State<TodayScreen> {
                 ),
                 Text(
                   log.type.name,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActivityRow(BuildContext context, SexualActivityLog activity) {
+    final color = AppTheme.activityColor(context);
+    final label = activity.protectionType == ProtectionType.protected
+        ? 'Protected'
+        : 'Unprotected';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(Icons.favorite_outline, size: 16, color: color),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Text(
+                  'Sexual activity',
                   style: TextStyle(
                     fontSize: 12,
                     color: Theme.of(context)

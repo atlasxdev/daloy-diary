@@ -26,7 +26,8 @@ class AppTheme {
   static const _roseDark = Color(0xFFB85A65);   // Deeper rose — dark mode primary
   static const _peach = Color(0xFFE8A87C);       // Warm peach — secondary accent
   static const _sage = Color(0xFF8EAA91);        // Muted sage — success/fertility
-  static const _lavender = Color(0xFF9B8EC4);    // Soft lavender — mood/activity
+  static const _lavender = Color(0xFF9B8EC4);    // Soft lavender — mood
+  static const _mauve = Color(0xFFC47E9B);       // Warm mauve — sexual activity
 
   // ── Light theme ─────────────────────────────────────────────
 
@@ -211,4 +212,7 @@ class AppTheme {
 
   static Color logDotColor(BuildContext context) =>
       _sage;
+
+  static Color activityColor(BuildContext context) =>
+      _mauve;
 }

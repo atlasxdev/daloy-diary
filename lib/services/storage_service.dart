@@ -3,6 +3,7 @@ import '../models/period.dart';
 import '../models/cycle.dart';
 import '../models/log_entry.dart';
 import '../models/notification_settings.dart';
+import '../models/sexual_activity_log.dart';
 
 /// StorageService wraps all Hive database operations in one place.
 ///
@@ -18,6 +19,7 @@ class StorageService {
   static const String _logEntriesBox = 'logEntries';
   static const String _settingsBox = 'settings';
   static const String _settingsKey = 'notificationSettings';
+  static const String _sexualActivityBox = 'sexualActivity';
   static const String _prefsBox = 'prefs';
   static const String _themeModeKey = 'themeMode';
 
@@ -34,12 +36,15 @@ class StorageService {
     Hive.registerAdapter(LogEntryAdapter());
     Hive.registerAdapter(LogTypeAdapter());
     Hive.registerAdapter(NotificationSettingsAdapter());
+    Hive.registerAdapter(SexualActivityLogAdapter());
+    Hive.registerAdapter(ProtectionTypeAdapter());
 
     // Open all boxes so they're ready to use immediately.
     await Hive.openBox<Period>(_periodsBox);
     await Hive.openBox<Cycle>(_cyclesBox);
     await Hive.openBox<LogEntry>(_logEntriesBox);
     await Hive.openBox<NotificationSettings>(_settingsBox);
+    await Hive.openBox<SexualActivityLog>(_sexualActivityBox);
     await Hive.openBox(_prefsBox);
   }
 
@@ -142,5 +147,42 @@ class StorageService {
   /// Save the theme mode preference.
   Future<void> saveThemeMode(String mode) async {
     await _prefs.put(_themeModeKey, mode);
+  }
+
+  // ── Sexual activity operations ────────────────────────────
+
+  Box<SexualActivityLog> get _sexualActivity =>
+      Hive.box<SexualActivityLog>(_sexualActivityBox);
+
+  Future<void> addSexualActivityLog(SexualActivityLog log) async {
+    await _sexualActivity.add(log);
+  }
+
+  /// Get the sexual activity log for a specific date, if any.
+  SexualActivityLog? getSexualActivityForDate(DateTime date) {
+    try {
+      return _sexualActivity.values.firstWhere((log) =>
+          log.date.year == date.year &&
+          log.date.month == date.month &&
+          log.date.day == date.day);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Get all sexual activity logs for a given month.
+  List<SexualActivityLog> getSexualActivityForMonth(int year, int month) {
+    return _sexualActivity.values
+        .where((log) => log.date.year == year && log.date.month == month)
+        .toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
+  }
+
+  Future<void> updateSexualActivityLog(SexualActivityLog log) async {
+    await log.save();
+  }
+
+  Future<void> deleteSexualActivityLog(SexualActivityLog log) async {
+    await log.delete();
   }
 }

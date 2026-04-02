@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/theme.dart';
 import '../models/log_entry.dart';
+import '../models/sexual_activity_log.dart';
 import '../services/storage_service.dart';
 
 /// The "Log" tab — a quick-entry screen for today's date.
@@ -48,15 +49,8 @@ class _LogScreenState extends State<LogScreen> {
     'Emotional',
   ];
 
-  static const _sexualActivityOptions = [
-    'Protected',
-    'Unprotected',
-    'No activity',
-  ];
-
   final Set<String> _selectedSymptoms = {};
   final Set<String> _selectedMoods = {};
-  String? _selectedSexualActivity;
 
   List<LogEntry> _existingLogs = [];
 
@@ -81,7 +75,6 @@ class _LogScreenState extends State<LogScreen> {
     final logs = _storage.getLogsForDate(_today);
     final symptoms = <String>{};
     final moods = <String>{};
-    String? sexActivity;
 
     for (final log in logs) {
       switch (log.type) {
@@ -90,7 +83,7 @@ class _LogScreenState extends State<LogScreen> {
         case LogType.mood:
           moods.add(log.value);
         case LogType.sexualActivity:
-          sexActivity = log.value;
+          break;
       }
     }
 
@@ -98,7 +91,6 @@ class _LogScreenState extends State<LogScreen> {
       _existingLogs = logs;
       _selectedSymptoms.addAll(symptoms);
       _selectedMoods.addAll(moods);
-      _selectedSexualActivity = sexActivity;
     });
   }
 
@@ -127,15 +119,6 @@ class _LogScreenState extends State<LogScreen> {
         notes: notes,
       ));
     }
-    if (_selectedSexualActivity != null) {
-      await _storage.addLogEntry(LogEntry(
-        date: _today,
-        type: LogType.sexualActivity,
-        value: _selectedSexualActivity!,
-        notes: notes,
-      ));
-    }
-
     // Reload to reflect saved state.
     _existingLogs = _storage.getLogsForDate(_today);
 
@@ -217,18 +200,7 @@ class _LogScreenState extends State<LogScreen> {
             const SizedBox(height: 28),
 
             // Sexual activity.
-            _sectionLabel('Sexual Activity', Icons.favorite_outline,
-                AppTheme.moodColor(context)),
-            const SizedBox(height: 10),
-            _singleChipGroup(
-              options: _sexualActivityOptions,
-              selected: _selectedSexualActivity,
-              baseColor: AppTheme.moodColor(context),
-              onSelect: (v) => setState(() {
-                _selectedSexualActivity =
-                    _selectedSexualActivity == v ? null : v;
-              }),
-            ),
+            _buildSexualActivitySection(),
 
             const SizedBox(height: 28),
 
@@ -278,6 +250,320 @@ class _LogScreenState extends State<LogScreen> {
     );
   }
 
+  // ── Sexual activity section ─────────────────────────────────
+
+  Widget _buildSexualActivitySection() {
+    final activity = _storage.getSexualActivityForDate(_today);
+    final color = AppTheme.activityColor(context);
+    final cs = Theme.of(context).colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionLabel('Sexual Activity', Icons.favorite_outline, color),
+        const SizedBox(height: 10),
+        GestureDetector(
+          onTap: () => _showSexualActivitySheet(existing: activity),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+            decoration: BoxDecoration(
+              color: activity != null
+                  ? color.withValues(alpha: 0.1)
+                  : cs.outline.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: activity != null
+                    ? color.withValues(alpha: 0.3)
+                    : Colors.transparent,
+                width: 1.5,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  activity != null
+                      ? Icons.favorite
+                      : Icons.add_circle_outline,
+                  size: 18,
+                  color: activity != null
+                      ? color
+                      : cs.onSurface.withValues(alpha: 0.4),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    activity != null
+                        ? (activity.protectionType ==
+                                ProtectionType.protected
+                            ? 'Protected'
+                            : 'Unprotected')
+                        : 'Tap to log sexual activity',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight:
+                          activity != null ? FontWeight.w600 : FontWeight.w400,
+                      color: activity != null
+                          ? color
+                          : cs.onSurface.withValues(alpha: 0.5),
+                    ),
+                  ),
+                ),
+                if (activity?.notes != null && activity!.notes!.isNotEmpty)
+                  Icon(
+                    Icons.note_outlined,
+                    size: 16,
+                    color: cs.onSurface.withValues(alpha: 0.3),
+                  ),
+                Icon(
+                  Icons.chevron_right,
+                  size: 18,
+                  color: cs.onSurface.withValues(alpha: 0.3),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showSexualActivitySheet({SexualActivityLog? existing}) {
+    var selectedType = existing?.protectionType;
+    final notesController =
+        TextEditingController(text: existing?.notes ?? '');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final cs = Theme.of(context).colorScheme;
+            final color = AppTheme.activityColor(context);
+
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  24,
+                  4,
+                  24,
+                  24 + MediaQuery.of(context).viewInsets.bottom,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      existing != null
+                          ? 'Edit Sexual Activity'
+                          : 'Log Sexual Activity',
+                      style:
+                          Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: -0.3,
+                              ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Protection type selector.
+                    Text(
+                      'Protection',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: cs.onSurface,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _protectionChip(
+                            label: 'Protected',
+                            icon: Icons.shield_outlined,
+                            isSelected:
+                                selectedType == ProtectionType.protected,
+                            color: color,
+                            onTap: () => setSheetState(() {
+                              selectedType = ProtectionType.protected;
+                            }),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _protectionChip(
+                            label: 'Unprotected',
+                            icon: Icons.remove_circle_outline,
+                            isSelected:
+                                selectedType == ProtectionType.unprotected,
+                            color: color,
+                            onTap: () => setSheetState(() {
+                              selectedType = ProtectionType.unprotected;
+                            }),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Notes field.
+                    Text(
+                      'Notes',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: cs.onSurface,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: notesController,
+                      maxLines: 2,
+                      decoration: InputDecoration(
+                        hintText: 'Optional notes...',
+                        hintStyle: TextStyle(
+                          color: cs.onSurface.withValues(alpha: 0.3),
+                        ),
+                        filled: true,
+                        fillColor: cs.surfaceContainerHighest,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: cs.outline.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: cs.outline.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: color),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Save button.
+                    FilledButton(
+                      onPressed: selectedType == null
+                          ? null
+                          : () async {
+                              final notes =
+                                  notesController.text.trim().isNotEmpty
+                                      ? notesController.text.trim()
+                                      : null;
+
+                              if (existing != null) {
+                                existing.protectionType = selectedType!;
+                                existing.notes = notes;
+                                await _storage
+                                    .updateSexualActivityLog(existing);
+                              } else {
+                                await _storage.addSexualActivityLog(
+                                  SexualActivityLog(
+                                    date: _today,
+                                    protectionType: selectedType!,
+                                    notes: notes,
+                                  ),
+                                );
+                              }
+
+                              if (mounted) {
+                                Navigator.pop(context);
+                                setState(() {});
+                              }
+                            },
+                      style: FilledButton.styleFrom(
+                        backgroundColor: color,
+                      ),
+                      child: Text(existing != null ? 'Update' : 'Save'),
+                    ),
+
+                    // Delete button (only when editing).
+                    if (existing != null) ...[
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: () async {
+                          await _storage
+                              .deleteSexualActivityLog(existing);
+                          if (mounted) {
+                            Navigator.pop(context);
+                            setState(() {});
+                          }
+                        },
+                        child: Text(
+                          'Delete',
+                          style: TextStyle(
+                            color: cs.error,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _protectionChip({
+    required String label,
+    required IconData icon,
+    required bool isSelected,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? color.withValues(alpha: 0.15)
+              : cs.outline.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? color : Colors.transparent,
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: isSelected ? color : cs.onSurface.withValues(alpha: 0.5),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                color: isSelected ? color : cs.onSurface,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ── UI building blocks ───────────────────────────────────────
 
   Widget _sectionLabel(String title, IconData icon, Color color) {
@@ -311,52 +597,6 @@ class _LogScreenState extends State<LogScreen> {
         final isSelected = selected.contains(option);
         return GestureDetector(
           onTap: () => onToggle(option),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? baseColor.withValues(alpha: 0.2)
-                  : Theme.of(context)
-                      .colorScheme
-                      .outline
-                      .withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color:
-                    isSelected ? baseColor : Colors.transparent,
-                width: 1.5,
-              ),
-            ),
-            child: Text(
-              option,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                color: isSelected
-                    ? baseColor
-                    : Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _singleChipGroup({
-    required List<String> options,
-    required String? selected,
-    required Color baseColor,
-    required ValueChanged<String> onSelect,
-  }) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: options.map((option) {
-        final isSelected = selected == option;
-        return GestureDetector(
-          onTap: () => onSelect(option),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),

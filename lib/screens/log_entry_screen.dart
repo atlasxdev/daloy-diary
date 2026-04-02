@@ -50,17 +50,10 @@ class _LogEntryScreenState extends State<LogEntryScreen> {
     'Emotional',
   ];
 
-  static const _sexualActivityOptions = [
-    'Protected',
-    'Unprotected',
-    'No activity',
-  ];
-
   // Track which chips the user has selected.
   // We use Sets so a chip can only be selected once.
   final Set<String> _selectedSymptoms = {};
   final Set<String> _selectedMoods = {};
-  String? _selectedSexualActivity;
 
   // Existing logs for this date (loaded from Hive on init).
   List<LogEntry> _existingLogs = [];
@@ -84,7 +77,6 @@ class _LogEntryScreenState extends State<LogEntryScreen> {
 
     final symptoms = <String>{};
     final moods = <String>{};
-    String? sexActivity;
 
     for (final log in logs) {
       switch (log.type) {
@@ -93,7 +85,7 @@ class _LogEntryScreenState extends State<LogEntryScreen> {
         case LogType.mood:
           moods.add(log.value);
         case LogType.sexualActivity:
-          sexActivity = log.value;
+          break;
       }
     }
 
@@ -101,7 +93,6 @@ class _LogEntryScreenState extends State<LogEntryScreen> {
       _existingLogs = logs;
       _selectedSymptoms.addAll(symptoms);
       _selectedMoods.addAll(moods);
-      _selectedSexualActivity = sexActivity;
     });
   }
 
@@ -137,16 +128,6 @@ class _LogEntryScreenState extends State<LogEntryScreen> {
         date: date,
         type: LogType.mood,
         value: mood,
-        notes: notes,
-      ));
-    }
-
-    // Save sexual activity (only one option allowed).
-    if (_selectedSexualActivity != null) {
-      await _storage.addLogEntry(LogEntry(
-        date: date,
-        type: LogType.sexualActivity,
-        value: _selectedSexualActivity!,
         notes: notes,
       ));
     }
@@ -206,29 +187,6 @@ class _LogEntryScreenState extends State<LogEntryScreen> {
                   } else {
                     _selectedMoods.add(value);
                   }
-                });
-              },
-            ),
-
-            const SizedBox(height: 24),
-
-            // ── Sexual activity section ──
-            _buildSectionHeader(
-              'Sexual Activity',
-              Icons.favorite,
-              Colors.purple.shade300,
-            ),
-            const SizedBox(height: 8),
-            _buildSingleSelectChipGroup(
-              options: _sexualActivityOptions,
-              selected: _selectedSexualActivity,
-              color: Colors.purple.shade100,
-              selectedColor: Colors.purple.shade300,
-              onSelect: (value) {
-                setState(() {
-                  // Tap again to deselect.
-                  _selectedSexualActivity =
-                      _selectedSexualActivity == value ? null : value;
                 });
               },
             ),
@@ -304,34 +262,6 @@ class _LogEntryScreenState extends State<LogEntryScreen> {
           label: Text(option),
           selected: isSelected,
           onSelected: (_) => onToggle(option),
-          backgroundColor: color,
-          selectedColor: selectedColor,
-          checkmarkColor: Colors.white,
-          labelStyle: TextStyle(
-            color: isSelected ? Colors.white : Colors.black87,
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  /// A group of single-select chips (user picks only one).
-  Widget _buildSingleSelectChipGroup({
-    required List<String> options,
-    required String? selected,
-    required Color color,
-    required Color selectedColor,
-    required ValueChanged<String> onSelect,
-  }) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: options.map((option) {
-        final isSelected = selected == option;
-        return ChoiceChip(
-          label: Text(option),
-          selected: isSelected,
-          onSelected: (_) => onSelect(option),
           backgroundColor: color,
           selectedColor: selectedColor,
           checkmarkColor: Colors.white,

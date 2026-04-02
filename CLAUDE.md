@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Daloy Diary is a privacy-first menstrual cycle tracker built with Flutter. It tracks periods, logs sexual activity, predicts next cycles, and sends local notifications. All data is stored locally by default (offline-first).
+Daloy Diary is a privacy-first menstrual cycle tracker built with Flutter. It tracks periods, logs sexual activity (with protection type and notes), predicts next cycles, and sends local notifications. All data is stored locally using Hive (offline-first).
 
-The project is in early development — `lib/main.dart` still contains the Flutter counter template. The planned architecture uses feature-based organization under `lib/` (cycle, logs, notifications, services, models, screens).
+The app has a working scaffold with four tabs (Today, Calendar, Log, Settings). Architecture uses feature-based organization under `lib/` with `models/`, `screens/`, `services/`, and `core/`.
 
 ## Common Commands
 
@@ -32,7 +32,7 @@ flutter build apk
 
 ## Tech Decisions
 
-- **Local storage:** Hive or SQLite (not yet implemented)
+- **Local storage:** Hive (implemented via `hive_flutter`)
 - **Notifications:** `flutter_local_notifications` — must work offline and persist after device restart
 - **Linting:** Uses `flutter_lints` (see `analysis_options.yaml`)
 - **Dart SDK:** ^3.11.4

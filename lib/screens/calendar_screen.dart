@@ -5,6 +5,7 @@ import '../core/theme.dart';
 import '../models/period.dart';
 import '../models/cycle.dart';
 import '../models/log_entry.dart';
+import '../models/sexual_activity_log.dart';
 import '../services/storage_service.dart';
 import '../services/notification_service.dart';
 import '../services/cycle_prediction_service.dart';
@@ -91,6 +92,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   bool _hasLogs(DateTime day) => _storage.getLogsForDate(day).isNotEmpty;
 
+  bool _hasSexualActivity(DateTime day) =>
+      _storage.getSexualActivityForDate(day) != null;
+
   DateTime _dateOnly(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
 
   // ── User actions ─────────────────────────────────────────────
@@ -107,6 +111,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final ongoingPeriod = _ongoingPeriod;
     final isPeriod = _isPeriodDay(day);
     final logsForDay = _storage.getLogsForDate(day);
+    final activityLog = _storage.getSexualActivityForDate(day);
 
     showModalBottomSheet(
       context: context,
@@ -152,8 +157,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   ),
 
                 // Existing logs summary.
-                if (logsForDay.isNotEmpty) ...[
-                  _buildLogsSummary(logsForDay),
+                if (logsForDay.isNotEmpty || activityLog != null) ...[
+                  _buildLogsSummary(logsForDay, activityLog),
                   const SizedBox(height: 12),
                 ],
 
@@ -192,6 +197,22 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   onTap: () {
                     Navigator.pop(context);
                     _openLogEntryScreen(day);
+                  },
+                ),
+
+                const SizedBox(height: 8),
+
+                // Sexual activity button.
+                _actionButton(
+                  icon: Icons.favorite_outline,
+                  label: activityLog != null
+                      ? 'Edit sexual activity'
+                      : 'Log sexual activity',
+                  color: AppTheme.activityColor(context),
+                  filled: false,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showSexualActivitySheet(day, existing: activityLog);
                   },
                 ),
               ],
@@ -246,14 +267,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildLogsSummary(List<LogEntry> logs) {
+  Widget _buildLogsSummary(List<LogEntry> logs, SexualActivityLog? activityLog) {
     final symptoms =
         logs.where((l) => l.type == LogType.symptom).map((l) => l.value);
     final moods =
         logs.where((l) => l.type == LogType.mood).map((l) => l.value);
-    final sex = logs
-        .where((l) => l.type == LogType.sexualActivity)
-        .map((l) => l.value);
 
     final items = <_LogSummaryItem>[
       if (symptoms.isNotEmpty)
@@ -262,9 +280,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
       if (moods.isNotEmpty)
         _LogSummaryItem(Icons.emoji_emotions_outlined,
             AppTheme.moodColor(context), moods.join(', ')),
-      if (sex.isNotEmpty)
-        _LogSummaryItem(Icons.favorite_outline, AppTheme.moodColor(context),
-            sex.join(', ')),
+      if (activityLog != null)
+        _LogSummaryItem(
+          Icons.favorite_outline,
+          AppTheme.activityColor(context),
+          activityLog.protectionType == ProtectionType.protected
+              ? 'Protected'
+              : 'Unprotected',
+        ),
     ];
 
     return Container(
@@ -385,6 +408,250 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }
   }
 
+  void _showSexualActivitySheet(DateTime day, {SexualActivityLog? existing}) {
+    var selectedType = existing?.protectionType;
+    final notesController =
+        TextEditingController(text: existing?.notes ?? '');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final cs = Theme.of(context).colorScheme;
+            final color = AppTheme.activityColor(context);
+
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  24,
+                  4,
+                  24,
+                  24 + MediaQuery.of(context).viewInsets.bottom,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      existing != null
+                          ? 'Edit Sexual Activity'
+                          : 'Log Sexual Activity',
+                      style:
+                          Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: -0.3,
+                              ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      _formatDate(day),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: cs.onSurface.withValues(alpha: 0.5),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Protection type selector.
+                    Text(
+                      'Protection',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: cs.onSurface,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _protectionChip(
+                            label: 'Protected',
+                            icon: Icons.shield_outlined,
+                            isSelected:
+                                selectedType == ProtectionType.protected,
+                            color: color,
+                            onTap: () => setSheetState(() {
+                              selectedType = ProtectionType.protected;
+                            }),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _protectionChip(
+                            label: 'Unprotected',
+                            icon: Icons.remove_circle_outline,
+                            isSelected:
+                                selectedType == ProtectionType.unprotected,
+                            color: color,
+                            onTap: () => setSheetState(() {
+                              selectedType = ProtectionType.unprotected;
+                            }),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Notes field.
+                    Text(
+                      'Notes',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: cs.onSurface,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: notesController,
+                      maxLines: 2,
+                      decoration: InputDecoration(
+                        hintText: 'Optional notes...',
+                        hintStyle: TextStyle(
+                          color: cs.onSurface.withValues(alpha: 0.3),
+                        ),
+                        filled: true,
+                        fillColor: cs.surfaceContainerHighest,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: cs.outline.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: cs.outline.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: color),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Save button.
+                    FilledButton(
+                      onPressed: selectedType == null
+                          ? null
+                          : () async {
+                              final notes =
+                                  notesController.text.trim().isNotEmpty
+                                      ? notesController.text.trim()
+                                      : null;
+
+                              if (existing != null) {
+                                existing.protectionType = selectedType!;
+                                existing.notes = notes;
+                                await _storage
+                                    .updateSexualActivityLog(existing);
+                              } else {
+                                await _storage.addSexualActivityLog(
+                                  SexualActivityLog(
+                                    date: _dateOnly(day),
+                                    protectionType: selectedType!,
+                                    notes: notes,
+                                  ),
+                                );
+                              }
+
+                              if (mounted) {
+                                Navigator.pop(context);
+                                setState(() {});
+                              }
+                            },
+                      style: FilledButton.styleFrom(
+                        backgroundColor: color,
+                      ),
+                      child: Text(existing != null ? 'Update' : 'Save'),
+                    ),
+
+                    // Delete button (only when editing).
+                    if (existing != null) ...[
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: () async {
+                          await _storage
+                              .deleteSexualActivityLog(existing);
+                          if (mounted) {
+                            Navigator.pop(context);
+                            setState(() {});
+                          }
+                        },
+                        child: Text(
+                          'Delete',
+                          style: TextStyle(
+                            color: cs.error,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _protectionChip({
+    required String label,
+    required IconData icon,
+    required bool isSelected,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? color.withValues(alpha: 0.15)
+              : cs.outline.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? color : Colors.transparent,
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: isSelected ? color : cs.onSurface.withValues(alpha: 0.5),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                color: isSelected ? color : cs.onSurface,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _openLogEntryScreen(DateTime day) async {
     final result = await Navigator.push<bool>(
       context,
@@ -499,6 +766,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final isPeriod = _isPeriodDay(day);
     final isPredicted = _isPredictedDay(day);
     final hasLog = _hasLogs(day);
+    final hasActivity = _hasSexualActivity(day);
 
     Color? bgColor;
     if (isSelected) {
@@ -557,6 +825,19 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 height: 5,
                 decoration: BoxDecoration(
                   color: AppTheme.logDotColor(context),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          if (hasActivity && !isSelected)
+            Positioned(
+              top: 4,
+              left: 4,
+              child: Container(
+                width: 5,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: AppTheme.activityColor(context),
                   shape: BoxShape.circle,
                 ),
               ),
