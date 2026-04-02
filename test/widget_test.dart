@@ -1,30 +1,34 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:daloy_diary/main.dart';
+import 'package:daloy_diary/services/cycle_prediction_service.dart';
+import 'package:daloy_diary/models/cycle.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  group('CyclePredictionService', () {
+    test('returns default 28-day cycle when no history', () {
+      final result = CyclePredictionService.averageCycleLength([]);
+      expect(result, 28);
+    });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    test('averages the last few completed cycles', () {
+      final cycles = [
+        Cycle(startDate: DateTime(2026, 3, 1), cycleLength: 30),
+        Cycle(startDate: DateTime(2026, 2, 1), cycleLength: 28),
+        Cycle(startDate: DateTime(2026, 1, 1), cycleLength: 26),
+      ];
+      // (30 + 28 + 26) / 3 = 28
+      expect(CyclePredictionService.averageCycleLength(cycles), 28);
+    });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    test('predicts next period from last start + average', () {
+      final cycles = [
+        Cycle(startDate: DateTime(2026, 3, 1), cycleLength: 30),
+      ];
+      final predicted = CyclePredictionService.predictNextPeriod(
+        lastPeriodStart: DateTime(2026, 3, 1),
+        cycles: cycles,
+      );
+      expect(predicted, DateTime(2026, 3, 31));
+    });
   });
 }

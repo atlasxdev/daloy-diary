@@ -1,4 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Needed on Android 13+ to show notifications -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Needed to schedule exact-time notifications (e.g. daily 8 AM reminders) -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+    <!-- Keeps scheduled notifications alive after the phone restarts -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+
     <application
         android:label="daloy_diary"
         android:name="${applicationName}"
