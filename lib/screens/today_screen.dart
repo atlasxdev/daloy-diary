@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../core/theme.dart';
+import '../core/gradient_header.dart';
 import '../models/period.dart';
 import '../models/cycle.dart';
 import '../models/log_entry.dart';
@@ -9,14 +10,6 @@ import '../models/sexual_activity_log.dart';
 import '../services/storage_service.dart';
 import '../services/cycle_prediction_service.dart';
 
-/// The "Today" tab — a quick-glance dashboard showing current
-/// cycle status, phase, and today's logs.
-///
-/// HIG layout principles applied:
-///   - Large, bold title at top
-///   - Clear visual hierarchy: most important info largest
-///   - Cards for grouping related info
-///   - Generous whitespace between sections
 class TodayScreen extends StatefulWidget {
   const TodayScreen({super.key});
 
@@ -29,32 +22,27 @@ class _TodayScreenState extends State<TodayScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Rebuild every time this tab becomes visible.
     final periods = _storage.getAllPeriods();
     final cycles = _storage.getAllCycles();
     final today = DateTime.now();
     final todayLogs = _storage.getLogsForDate(today);
     final todayActivity = _storage.getSexualActivityForDate(today);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Today'),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-        child: periods.isEmpty
-            ? _buildEmptyState(context)
-            : _buildDashboard(context, periods, cycles, todayLogs, todayActivity),
-      ),
+    return GradientScaffold(
+      title: 'Today',
+      gradientHeight: 240,
+      child: periods.isEmpty
+          ? _buildEmptyState(context)
+          : _buildDashboard(context, periods, cycles, todayLogs, todayActivity),
     );
   }
 
-  // ── Empty state (no data yet) ────────────────────────────────
+  // ── Empty state ──────────────────────────────────────────────
 
   Widget _buildEmptyState(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.only(top: 80),
+        padding: const EdgeInsets.only(top: 60),
         child: Column(
           children: [
             Icon(
@@ -86,7 +74,7 @@ class _TodayScreenState extends State<TodayScreen> {
     );
   }
 
-  // ── Main dashboard ───────────────────────────────────────────
+  // ── Dashboard ────────────────────────────────────────────────
 
   Widget _buildDashboard(
     BuildContext context,
@@ -104,14 +92,10 @@ class _TodayScreenState extends State<TodayScreen> {
       cycles: cycles,
     );
 
-    // Calculate cycle day (1-indexed from last period start).
     final cycleDay =
         today.difference(_dateOnly(latestPeriod.startDate)).inDays + 1;
-
-    // Days until next period.
     final daysUntilNext = _dateOnly(nextPeriod).difference(today).inDays;
 
-    // Determine current phase.
     final phase = _getCyclePhase(
       cycleDay: cycleDay,
       periodLength: avgPeriodLen,
@@ -119,76 +103,107 @@ class _TodayScreenState extends State<TodayScreen> {
       isOngoing: latestPeriod.isOngoing,
     );
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // ── Phase ring + cycle day ──
-        _buildPhaseCard(context, cycleDay, avgCycleLen, phase),
-        const SizedBox(height: 16),
-
-        // ── Key stats row ──
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                context,
-                label: 'Next period',
-                value: daysUntilNext <= 0 ? 'Due' : '$daysUntilNext',
-                unit: daysUntilNext <= 0 ? '' : daysUntilNext == 1 ? 'day' : 'days',
-                color: AppTheme.predictedColor(context),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Cycle status label.
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 12),
+            child: Text(
+              'Cycle status',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: Colors.white.withValues(alpha: 0.85),
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildStatCard(
-                context,
-                label: 'Cycle length',
-                value: '$avgCycleLen',
-                unit: 'days avg',
-                color: Theme.of(context).colorScheme.primary,
+          ),
+
+          // ── Cycle ring card ──
+          _buildCycleCard(context, cycleDay, avgCycleLen, phase),
+          const SizedBox(height: 16),
+
+          // ── 3 stat cards ──
+          Row(
+            children: [
+              Expanded(
+                child: _buildMiniStat(
+                  context,
+                  icon: Icons.today_outlined,
+                  label: 'Today',
+                  value: 'Day $cycleDay',
+                  color: _phaseColor(context, phase),
+                ),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildMiniStat(
+                  context,
+                  icon: Icons.egg_outlined,
+                  label: 'Ovulation',
+                  value: '~Day ${(avgCycleLen * 0.5).round()}',
+                  color: AppTheme.fertileColor(context),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildMiniStat(
+                  context,
+                  icon: Icons.event_outlined,
+                  label: 'Period',
+                  value: daysUntilNext <= 0
+                      ? 'Due'
+                      : 'In $daysUntilNext d',
+                  color: AppTheme.predictedColor(context),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
 
-        // ── Insight / phase message ──
-        _buildInsightCard(context, phase, daysUntilNext),
-        const SizedBox(height: 16),
+          // ── Quick Log section ──
+          _buildQuickLogSection(context),
+          const SizedBox(height: 24),
 
-        // ── Today's logs ──
-        _buildTodayLogs(context, todayLogs, todayActivity),
-      ],
+          // ── Insight card ──
+          _buildInsightCard(context, phase, daysUntilNext),
+          const SizedBox(height: 16),
+
+          // ── Today's logs ──
+          _buildTodayLogs(context, todayLogs, todayActivity),
+        ],
+      ),
     );
   }
 
-  // ── Phase card with circular progress ────────────────────────
+  // ── Cycle ring card (centered, prominent) ────────────────────
 
-  Widget _buildPhaseCard(
+  Widget _buildCycleCard(
     BuildContext context,
     int cycleDay,
     int cycleLength,
     _CyclePhase phase,
   ) {
+    final cs = Theme.of(context).colorScheme;
     final progress = (cycleDay / cycleLength).clamp(0.0, 1.0);
+    final color = _phaseColor(context, phase);
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 24),
-        child: Row(
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+        child: Column(
           children: [
-            // Circular progress ring.
+            // Ring.
             SizedBox(
-              width: 88,
-              height: 88,
+              width: 140,
+              height: 140,
               child: CustomPaint(
                 painter: _CycleRingPainter(
                   progress: progress,
-                  color: _phaseColor(context, phase),
-                  trackColor: Theme.of(context)
-                      .colorScheme
-                      .outline
-                      .withValues(alpha: 0.15),
+                  color: color,
+                  trackColor: cs.outline.withValues(alpha: 0.12),
                 ),
                 child: Center(
                   child: Column(
@@ -197,20 +212,17 @@ class _TodayScreenState extends State<TodayScreen> {
                       Text(
                         '$cycleDay',
                         style: TextStyle(
-                          fontSize: 28,
+                          fontSize: 48,
                           fontWeight: FontWeight.w700,
-                          color: _phaseColor(context, phase),
-                          letterSpacing: -1,
+                          color: color,
+                          letterSpacing: -2,
                         ),
                       ),
                       Text(
                         'of $cycleLength',
                         style: TextStyle(
-                          fontSize: 11,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.5),
+                          fontSize: 12,
+                          color: cs.onSurface.withValues(alpha: 0.45),
                         ),
                       ),
                     ],
@@ -218,46 +230,23 @@ class _TodayScreenState extends State<TodayScreen> {
                 ),
               ),
             ),
-            const SizedBox(width: 24),
+            const SizedBox(height: 14),
             // Phase label.
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Day $cycleDay',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.5),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    phase.label,
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                      color: _phaseColor(context, phase),
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    phase.description,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.5),
-                      height: 1.3,
-                    ),
-                  ),
-                ],
+            Text(
+              phase.label,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: color,
+                letterSpacing: -0.3,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              phase.description,
+              style: TextStyle(
+                fontSize: 13,
+                color: cs.onSurface.withValues(alpha: 0.5),
               ),
             ),
           ],
@@ -266,64 +255,139 @@ class _TodayScreenState extends State<TodayScreen> {
     );
   }
 
-  // ── Stat cards ───────────────────────────────────────────────
+  // ── Mini stat card ───────────────────────────────────────────
 
-  Widget _buildStatCard(
+  Widget _buildMiniStat(
     BuildContext context, {
+    required IconData icon,
     required String label,
     required String value,
-    required String unit,
     required Color color,
   }) {
+    final cs = Theme.of(context).colorScheme;
+
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 18, color: color),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: cs.onSurface,
+                letterSpacing: -0.3,
+              ),
+            ),
+            const SizedBox(height: 2),
             Text(
               label,
               style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.5),
+                fontSize: 11,
+                color: cs.onSurface.withValues(alpha: 0.45),
               ),
-            ),
-            const SizedBox(height: 6),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w700,
-                    color: color,
-                    letterSpacing: -1,
-                  ),
-                ),
-                if (unit.isNotEmpty) ...[
-                  const SizedBox(width: 4),
-                  Text(
-                    unit,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.5),
-                    ),
-                  ),
-                ],
-              ],
             ),
           ],
         ),
       ),
+    );
+  }
+
+  // ── Quick Log section ────────────────────────────────────────
+
+  Widget _buildQuickLogSection(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 12),
+          child: Text(
+            'Quick Log',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: cs.onSurface.withValues(alpha: 0.5),
+              letterSpacing: -0.2,
+            ),
+          ),
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _quickLogButton(
+              icon: Icons.water_drop_outlined,
+              label: 'Period',
+              color: AppTheme.periodColor(context),
+            ),
+            _quickLogButton(
+              icon: Icons.healing,
+              label: 'Symptoms',
+              color: AppTheme.periodColor(context),
+            ),
+            _quickLogButton(
+              icon: Icons.emoji_emotions_outlined,
+              label: 'Mood',
+              color: AppTheme.moodColor(context),
+            ),
+            _quickLogButton(
+              icon: Icons.favorite_outline,
+              label: 'Intimacy',
+              color: AppTheme.activityColor(context),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _quickLogButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    return Column(
+      children: [
+        Container(
+          width: 58,
+          height: 58,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                color.withValues(alpha: 0.85),
+                color.withValues(alpha: 0.5),
+              ],
+            ),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, size: 24, color: Colors.white),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            color: cs.onSurface.withValues(alpha: 0.6),
+          ),
+        ),
+      ],
     );
   }
 
@@ -359,7 +423,7 @@ class _TodayScreenState extends State<TodayScreen> {
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: _phaseColor(context, phase).withValues(alpha: 0.15),
+                color: _phaseColor(context, phase).withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
@@ -385,9 +449,11 @@ class _TodayScreenState extends State<TodayScreen> {
     );
   }
 
-  // ── Today's logs section ─────────────────────────────────────
+  // ── Today's logs ─────────────────────────────────────────────
 
   Widget _buildTodayLogs(BuildContext context, List<LogEntry> logs, SexualActivityLog? activity) {
+    final cs = Theme.of(context).colorScheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -398,10 +464,7 @@ class _TodayScreenState extends State<TodayScreen> {
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.5),
+              color: cs.onSurface.withValues(alpha: 0.5),
               letterSpacing: -0.2,
             ),
           ),
@@ -416,10 +479,7 @@ class _TodayScreenState extends State<TodayScreen> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.4),
+                    color: cs.onSurface.withValues(alpha: 0.4),
                     height: 1.4,
                   ),
                 ),
@@ -456,7 +516,7 @@ class _TodayScreenState extends State<TodayScreen> {
         color = AppTheme.moodColor(context);
       case LogType.sexualActivity:
         icon = Icons.favorite_outline;
-        color = AppTheme.moodColor(context);
+        color = AppTheme.activityColor(context);
     }
 
     return Padding(
@@ -467,7 +527,7 @@ class _TodayScreenState extends State<TodayScreen> {
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
+              color: color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, size: 16, color: color),
@@ -479,19 +539,13 @@ class _TodayScreenState extends State<TodayScreen> {
               children: [
                 Text(
                   log.value,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                  ),
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
                 ),
                 Text(
                   log.type.name,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.4),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                   ),
                 ),
               ],
@@ -516,7 +570,7 @@ class _TodayScreenState extends State<TodayScreen> {
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
+              color: color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(Icons.favorite_outline, size: 16, color: color),
@@ -526,21 +580,12 @@ class _TodayScreenState extends State<TodayScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                Text(label, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
                 Text(
                   'Sexual activity',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.4),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                   ),
                 ),
               ],
@@ -551,7 +596,7 @@ class _TodayScreenState extends State<TodayScreen> {
     );
   }
 
-  // ── Cycle phase logic ────────────────────────────────────────
+  // ── Phase logic ──────────────────────────────────────────────
 
   _CyclePhase _getCyclePhase({
     required int cycleDay,
@@ -560,14 +605,8 @@ class _TodayScreenState extends State<TodayScreen> {
     required bool isOngoing,
   }) {
     if (isOngoing || cycleDay <= periodLength) return _CyclePhase.period;
-
-    // Approximate phases based on a standard cycle:
-    // Follicular: after period ends → day ~13
-    // Fertile window: ~day 12-16
-    // Luteal: ~day 17 → end of cycle
     final follicularEnd = (cycleLength * 0.45).round();
     final fertileEnd = (cycleLength * 0.55).round();
-
     if (cycleDay <= follicularEnd) return _CyclePhase.follicular;
     if (cycleDay <= fertileEnd) return _CyclePhase.fertile;
     return _CyclePhase.luteal;
@@ -589,7 +628,7 @@ class _TodayScreenState extends State<TodayScreen> {
   DateTime _dateOnly(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
 }
 
-// ── Cycle phase enum ─────────────────────────────────────────
+// ── Phase enum ──────────────────────────────────────────────
 
 enum _CyclePhase {
   period('Period', 'Menstruation phase'),
@@ -602,7 +641,7 @@ enum _CyclePhase {
   const _CyclePhase(this.label, this.description);
 }
 
-// ── Circular progress ring painter ───────────────────────────
+// ── Ring painter ────────────────────────────────────────────
 
 class _CycleRingPainter extends CustomPainter {
   final double progress;
@@ -618,29 +657,25 @@ class _CycleRingPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = (size.width - 8) / 2;
-    const strokeWidth = 6.0;
+    final radius = (size.width - 12) / 2;
+    const strokeWidth = 10.0;
 
-    // Track (background ring).
     final trackPaint = Paint()
       ..color = trackColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
-
     canvas.drawCircle(center, radius, trackPaint);
 
-    // Progress arc.
     final progressPaint = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
-
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),
-      -math.pi / 2,          // Start from top
-      2 * math.pi * progress, // Sweep angle
+      -math.pi / 2,
+      2 * math.pi * progress,
       false,
       progressPaint,
     );

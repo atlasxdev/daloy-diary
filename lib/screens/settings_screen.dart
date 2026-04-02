@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/gradient_header.dart';
 import '../main.dart' show themeNotifier;
 import '../models/log_entry.dart';
 import '../models/notification_settings.dart';
@@ -94,9 +95,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
-      body: ListView(
+    return GradientScaffold(
+      title: 'Settings',
+      gradientHeight: 140,
+      child: ListView(
         padding: const EdgeInsets.only(bottom: 40),
         children: [
           // ── Appearance ──

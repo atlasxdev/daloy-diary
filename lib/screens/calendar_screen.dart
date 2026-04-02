@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 import '../core/theme.dart';
+import '../core/gradient_header.dart';
 import '../models/period.dart';
 import '../models/cycle.dart';
 import '../models/log_entry.dart';
@@ -672,9 +673,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Calendar')),
-      body: Column(
+    return GradientScaffold(
+      title: 'Calendar',
+      gradientHeight: 160,
+      child: Column(
         children: [
           TableCalendar(
             firstDay: DateTime(2020, 1, 1),

@@ -51,6 +51,15 @@ class NotificationService {
     );
 
     await _plugin.initialize(initSettings);
+
+    // On Android 13+ (API 33), we must request POST_NOTIFICATIONS at runtime.
+    // Without this, notifications are silently blocked.
+    final androidPlugin =
+        _plugin.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+    if (androidPlugin != null) {
+      await androidPlugin.requestNotificationsPermission();
+    }
   }
 
   /// Send a notification immediately — for testing purposes only.

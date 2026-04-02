@@ -8,7 +8,7 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 
     <application
-        android:label="daloy_diary"
+        android:label="Daloy Diary"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

@@ -109,16 +109,14 @@ class AppTheme {
         ),
       ),
 
-      // ── Cards: rounded, subtle elevation ──
+      // ── Cards: rounded, soft shadow, no border ──
       cardTheme: CardThemeData(
         color: colorScheme.surfaceContainerHighest,
-        elevation: 0,
+        elevation: 1,
+        shadowColor: colorScheme.shadow.withValues(alpha: 0.08),
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(
-            color: colorScheme.outline.withValues(alpha: 0.3),
-          ),
+          borderRadius: BorderRadius.circular(18),
         ),
       ),
 
@@ -215,4 +213,30 @@ class AppTheme {
 
   static Color activityColor(BuildContext context) =>
       _mauve;
+
+  // ── Header gradient ────────────────────────────────────────
+  // Warm pink-to-peach gradient used at the top of every screen.
+
+  static const headerGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFD97B83), // Rich warm pink
+      Color(0xFFEA9E7E), // Warm coral/salmon
+    ],
+  );
+
+  static const headerGradientDark = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF8A4450), // Deep rose
+      Color(0xFF9A6550), // Dark coral
+    ],
+  );
+
+  static LinearGradient getHeaderGradient(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? headerGradientDark
+          : headerGradient;
 }
