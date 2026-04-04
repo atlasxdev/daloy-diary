@@ -2,7 +2,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../core/theme.dart';
-import '../core/gradient_header.dart';
 import '../models/period.dart';
 import '../models/cycle.dart';
 import '../models/log_entry.dart';
@@ -28,18 +27,71 @@ class _TodayScreenState extends State<TodayScreen> {
     final todayLogs = _storage.getLogsForDate(today);
     final todayActivity = _storage.getSexualActivityForDate(today);
 
-    return GradientScaffold(
-      title: 'Today',
-      gradientHeight: 240,
-      child: periods.isEmpty
-          ? _buildEmptyState(context)
-          : _buildDashboard(context, periods, cycles, todayLogs, todayActivity),
+    return Scaffold(
+      body: Stack(
+        children: [
+          // Gradient header background.
+          _buildGradientHeader(context),
+          // Scrollable content layered on top.
+          SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Title on gradient.
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                  child: Text(
+                    'Hey there',
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: Theme.of(context).colorScheme.onPrimary,
+                          letterSpacing: -0.5,
+                        ),
+                  ),
+                ),
+                // Content.
+                Expanded(
+                  child: periods.isEmpty
+                      ? _buildEmptyState(context)
+                      : _buildDashboard(
+                          context, periods, cycles, todayLogs, todayActivity),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGradientHeader(BuildContext context) {
+    final gradient = AppTheme.getHeaderGradient(context);
+    final scaffoldBg = Theme.of(context).scaffoldBackgroundColor;
+
+    return Container(
+      height: 260,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          stops: const [0.0, 0.5, 0.8, 1.0],
+          colors: [
+            gradient.colors.first,
+            gradient.colors.last,
+            gradient.colors.last.withValues(alpha: 0.25),
+            scaffoldBg,
+          ],
+        ),
+      ),
     );
   }
 
   // ── Empty state ──────────────────────────────────────────────
 
   Widget _buildEmptyState(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.only(top: 60),
@@ -48,23 +100,22 @@ class _TodayScreenState extends State<TodayScreen> {
             Icon(
               Icons.calendar_today_outlined,
               size: 64,
-              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
+              color: cs.primary.withValues(alpha: 0.4),
             ),
             const SizedBox(height: 20),
             Text(
               'Welcome to Daloy Diary',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: -0.5,
-                  ),
+              style: tt.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                letterSpacing: -0.5,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               'Go to the Calendar tab to log\nyour first period.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                fontSize: 15,
+              style: tt.bodyLarge?.copyWith(
+                color: cs.onSurfaceVariant,
                 height: 1.4,
               ),
             ),
@@ -83,6 +134,8 @@ class _TodayScreenState extends State<TodayScreen> {
     List<LogEntry> todayLogs,
     SexualActivityLog? todayActivity,
   ) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
     final today = _dateOnly(DateTime.now());
     final latestPeriod = periods.first;
     final avgCycleLen = CyclePredictionService.averageCycleLength(cycles);
@@ -104,24 +157,22 @@ class _TodayScreenState extends State<TodayScreen> {
     );
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Cycle status label.
+          // Cycle status label on gradient.
           Padding(
             padding: const EdgeInsets.only(left: 4, bottom: 12),
             child: Text(
               'Cycle status',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: Colors.white.withValues(alpha: 0.85),
+              style: tt.labelLarge?.copyWith(
+                color: cs.onPrimary.withValues(alpha: 0.85),
               ),
             ),
           ),
 
-          // ── Cycle ring card ──
+          // ── Cycle ring card (overlaps gradient) ──
           _buildCycleCard(context, cycleDay, avgCycleLen, phase),
           const SizedBox(height: 16),
 
@@ -153,9 +204,7 @@ class _TodayScreenState extends State<TodayScreen> {
                   context,
                   icon: Icons.event_outlined,
                   label: 'Period',
-                  value: daysUntilNext <= 0
-                      ? 'Due'
-                      : 'In $daysUntilNext d',
+                  value: daysUntilNext <= 0 ? 'Due' : 'In $daysUntilNext d',
                   color: AppTheme.predictedColor(context),
                 ),
               ),
@@ -178,7 +227,7 @@ class _TodayScreenState extends State<TodayScreen> {
     );
   }
 
-  // ── Cycle ring card (centered, prominent) ────────────────────
+  // ── Cycle ring card ──────────────────────────────────────────
 
   Widget _buildCycleCard(
     BuildContext context,
@@ -187,23 +236,27 @@ class _TodayScreenState extends State<TodayScreen> {
     _CyclePhase phase,
   ) {
     final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
     final progress = (cycleDay / cycleLength).clamp(0.0, 1.0);
     final color = _phaseColor(context, phase);
 
     return Card(
+      color: cs.surfaceContainerHighest,
+      elevation: 2,
+      shadowColor: cs.shadow.withValues(alpha: 0.1),
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+        padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
         child: Column(
           children: [
-            // Ring.
             SizedBox(
-              width: 140,
-              height: 140,
+              width: 150,
+              height: 150,
               child: CustomPaint(
                 painter: _CycleRingPainter(
                   progress: progress,
                   color: color,
-                  trackColor: cs.outline.withValues(alpha: 0.12),
+                  trackColor: cs.outlineVariant.withValues(alpha: 0.25),
                 ),
                 child: Center(
                   child: Column(
@@ -211,18 +264,16 @@ class _TodayScreenState extends State<TodayScreen> {
                     children: [
                       Text(
                         '$cycleDay',
-                        style: TextStyle(
-                          fontSize: 48,
+                        style: tt.displayLarge?.copyWith(
                           fontWeight: FontWeight.w700,
-                          color: color,
+                          color: cs.onSurface,
                           letterSpacing: -2,
                         ),
                       ),
                       Text(
                         'of $cycleLength',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: cs.onSurface.withValues(alpha: 0.45),
+                        style: tt.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -230,12 +281,10 @@ class _TodayScreenState extends State<TodayScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 14),
-            // Phase label.
+            const SizedBox(height: 16),
             Text(
               phase.label,
-              style: TextStyle(
-                fontSize: 18,
+              style: tt.titleMedium?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: color,
                 letterSpacing: -0.3,
@@ -244,9 +293,8 @@ class _TodayScreenState extends State<TodayScreen> {
             const SizedBox(height: 2),
             Text(
               phase.description,
-              style: TextStyle(
-                fontSize: 13,
-                color: cs.onSurface.withValues(alpha: 0.5),
+              style: tt.bodySmall?.copyWith(
+                color: cs.onSurfaceVariant,
               ),
             ),
           ],
@@ -265,6 +313,7 @@ class _TodayScreenState extends State<TodayScreen> {
     required Color color,
   }) {
     final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
 
     return Card(
       margin: EdgeInsets.zero,
@@ -284,8 +333,7 @@ class _TodayScreenState extends State<TodayScreen> {
             const SizedBox(height: 8),
             Text(
               value,
-              style: TextStyle(
-                fontSize: 14,
+              style: tt.titleSmall?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: cs.onSurface,
                 letterSpacing: -0.3,
@@ -294,9 +342,8 @@ class _TodayScreenState extends State<TodayScreen> {
             const SizedBox(height: 2),
             Text(
               label,
-              style: TextStyle(
-                fontSize: 11,
-                color: cs.onSurface.withValues(alpha: 0.45),
+              style: tt.labelSmall?.copyWith(
+                color: cs.onSurfaceVariant,
               ),
             ),
           ],
@@ -308,6 +355,7 @@ class _TodayScreenState extends State<TodayScreen> {
   // ── Quick Log section ────────────────────────────────────────
 
   Widget _buildQuickLogSection(BuildContext context) {
+    final tt = Theme.of(context).textTheme;
     final cs = Theme.of(context).colorScheme;
 
     return Column(
@@ -317,33 +365,32 @@ class _TodayScreenState extends State<TodayScreen> {
           padding: const EdgeInsets.only(left: 4, bottom: 12),
           child: Text(
             'Quick Log',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: cs.onSurface.withValues(alpha: 0.5),
-              letterSpacing: -0.2,
-            ),
+            style: tt.titleSmall?.copyWith(color: cs.onSurfaceVariant),
           ),
         ),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            _quickLogButton(
+            _quickLogCircle(
+              context,
               icon: Icons.water_drop_outlined,
               label: 'Period',
               color: AppTheme.periodColor(context),
             ),
-            _quickLogButton(
+            _quickLogCircle(
+              context,
               icon: Icons.healing,
               label: 'Symptoms',
               color: AppTheme.periodColor(context),
             ),
-            _quickLogButton(
+            _quickLogCircle(
+              context,
               icon: Icons.emoji_emotions_outlined,
               label: 'Mood',
               color: AppTheme.moodColor(context),
             ),
-            _quickLogButton(
+            _quickLogCircle(
+              context,
               icon: Icons.favorite_outline,
               label: 'Intimacy',
               color: AppTheme.activityColor(context),
@@ -354,40 +401,44 @@ class _TodayScreenState extends State<TodayScreen> {
     );
   }
 
-  Widget _quickLogButton({
+  Widget _quickLogCircle(
+    BuildContext context, {
     required IconData icon,
     required String label,
     required Color color,
   }) {
     final cs = Theme.of(context).colorScheme;
-    return Column(
-      children: [
-        Container(
-          width: 58,
-          height: 58,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                color.withValues(alpha: 0.85),
-                color.withValues(alpha: 0.5),
-              ],
+    final tt = Theme.of(context).textTheme;
+
+    return GestureDetector(
+      onTap: () {},
+      child: Column(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  color.withValues(alpha: 0.85),
+                  color.withValues(alpha: 0.45),
+                ],
+              ),
+              shape: BoxShape.circle,
             ),
-            shape: BoxShape.circle,
+            child: Icon(icon, size: 24, color: cs.onPrimary),
           ),
-          child: Icon(icon, size: 24, color: Colors.white),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
-            color: cs.onSurface.withValues(alpha: 0.6),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            style: tt.labelSmall?.copyWith(
+              color: cs.onSurfaceVariant,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -398,6 +449,9 @@ class _TodayScreenState extends State<TodayScreen> {
     _CyclePhase phase,
     int daysUntilNext,
   ) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+
     String message;
     switch (phase) {
       case _CyclePhase.period:
@@ -415,6 +469,7 @@ class _TodayScreenState extends State<TodayScreen> {
     }
 
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
@@ -436,9 +491,8 @@ class _TodayScreenState extends State<TodayScreen> {
             Expanded(
               child: Text(
                 message,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Theme.of(context).colorScheme.onSurface,
+                style: tt.bodyMedium?.copyWith(
+                  color: cs.onSurface,
                   height: 1.3,
                 ),
               ),
@@ -451,8 +505,10 @@ class _TodayScreenState extends State<TodayScreen> {
 
   // ── Today's logs ─────────────────────────────────────────────
 
-  Widget _buildTodayLogs(BuildContext context, List<LogEntry> logs, SexualActivityLog? activity) {
+  Widget _buildTodayLogs(
+      BuildContext context, List<LogEntry> logs, SexualActivityLog? activity) {
     final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -461,25 +517,20 @@ class _TodayScreenState extends State<TodayScreen> {
           padding: const EdgeInsets.only(left: 4, bottom: 8),
           child: Text(
             "Today's Logs",
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: cs.onSurface.withValues(alpha: 0.5),
-              letterSpacing: -0.2,
-            ),
+            style: tt.titleSmall?.copyWith(color: cs.onSurfaceVariant),
           ),
         ),
         if (logs.isEmpty && activity == null)
           Card(
+            margin: EdgeInsets.zero,
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Center(
                 child: Text(
                   'Nothing logged today.\nTap the Log tab to add entries.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: cs.onSurface.withValues(alpha: 0.4),
+                  style: tt.bodyMedium?.copyWith(
+                    color: cs.onSurfaceVariant,
                     height: 1.4,
                   ),
                 ),
@@ -488,14 +539,13 @@ class _TodayScreenState extends State<TodayScreen> {
           )
         else
           Card(
+            margin: EdgeInsets.zero,
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Column(
                 children: [
-                  for (final log in logs)
-                    _buildLogRow(context, log),
-                  if (activity != null)
-                    _buildActivityRow(context, activity),
+                  for (final log in logs) _buildLogRow(context, log),
+                  if (activity != null) _buildActivityRow(context, activity),
                 ],
               ),
             ),
@@ -505,6 +555,9 @@ class _TodayScreenState extends State<TodayScreen> {
   }
 
   Widget _buildLogRow(BuildContext context, LogEntry log) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+
     IconData icon;
     Color color;
     switch (log.type) {
@@ -539,14 +592,11 @@ class _TodayScreenState extends State<TodayScreen> {
               children: [
                 Text(
                   log.value,
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                  style: tt.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
                 ),
                 Text(
                   log.type.name,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-                  ),
+                  style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                 ),
               ],
             ),
@@ -557,6 +607,8 @@ class _TodayScreenState extends State<TodayScreen> {
   }
 
   Widget _buildActivityRow(BuildContext context, SexualActivityLog activity) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
     final color = AppTheme.activityColor(context);
     final label = activity.protectionType == ProtectionType.protected
         ? 'Protected'
@@ -580,13 +632,13 @@ class _TodayScreenState extends State<TodayScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+                Text(
+                  label,
+                  style: tt.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
+                ),
                 Text(
                   'Sexual activity',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-                  ),
+                  style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                 ),
               ],
             ),

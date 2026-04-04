@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../core/gradient_header.dart';
 import '../main.dart' show themeNotifier;
 import '../models/log_entry.dart';
 import '../models/notification_settings.dart';
@@ -8,13 +7,6 @@ import '../services/storage_service.dart';
 import '../services/notification_service.dart';
 import '../services/cycle_prediction_service.dart';
 
-/// Settings tab — HIG "grouped inset" list style.
-///
-/// HIG guidance applied:
-///   - Grouped sections with uppercase gray headers
-///   - Inset rounded-rect cards for each group
-///   - Switches, disclosure indicators, and detail labels
-///   - Destructive actions in red at the bottom
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -91,24 +83,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return '$displayHour:$displayMinute $period';
   }
 
-  // ── Build ────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
-    return GradientScaffold(
-      title: 'Settings',
-      gradientHeight: 140,
-      child: ListView(
+    final cs = Theme.of(context).colorScheme;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Settings'),
+        centerTitle: false,
+        scrolledUnderElevation: 0,
+      ),
+      body: ListView(
         padding: const EdgeInsets.only(bottom: 40),
         children: [
           // ── Appearance ──
-          _sectionHeader('APPEARANCE'),
-          _groupCard([
-            _themeRow(),
-          ]),
+          _sectionHeader('Appearance'),
+          _groupCard([_themeRow()]),
 
           // ── Notifications master switch ──
-          _sectionHeader('NOTIFICATIONS'),
+          _sectionHeader('Notifications'),
           _groupCard([
             _switchRow(
               label: 'Enable Notifications',
@@ -129,7 +122,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _sectionHeader('DAILY PERIOD REMINDERS'),
+                  _sectionHeader('Daily Period Reminders'),
                   _groupCard([
                     _switchRow(
                       label: 'Daily Reminders',
@@ -162,7 +155,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ]),
 
                   // ── Pre-period alerts ──
-                  _sectionHeader('PRE-PERIOD ALERTS'),
+                  _sectionHeader('Pre-Period Alerts'),
                   _groupCard([
                     _switchRow(
                       label: 'Pre-Period Alerts',
@@ -211,58 +204,55 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
 
           // ── Test ──
-          _sectionHeader('TEST'),
+          _sectionHeader('Test'),
           _groupCard([
-            InkWell(
+            ListTile(
+              title: Text('Send Test Notification'),
+              trailing: Icon(
+                Icons.notifications_active_outlined,
+                color: cs.primary,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               onTap: () async {
                 final messenger = ScaffoldMessenger.of(context);
                 await NotificationService.showTestNotification();
                 if (mounted) {
                   messenger.showSnackBar(
-                    SnackBar(
-                      content: const Text('Test notification sent!'),
+                    const SnackBar(
+                      content: Text('Test notification sent!'),
                       behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                      duration: const Duration(seconds: 2),
+                      duration: Duration(seconds: 2),
                     ),
                   );
                 }
               },
-              borderRadius: BorderRadius.circular(12),
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                child: Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        'Send Test Notification',
-                        style: TextStyle(fontSize: 16),
-                      ),
-                    ),
-                    Icon(
-                      Icons.notifications_active_outlined,
-                      size: 20,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ],
-                ),
-              ),
             ),
           ]),
 
-          // ── Data ──
-          _sectionHeader('DATA'),
-          _groupCard([
-            _destructiveRow(
-              label: 'Clear All Data',
+          // ── Data (destructive) ──
+          _sectionHeader('Data'),
+          Card(
+            color: cs.errorContainer,
+            elevation: 0,
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            child: ListTile(
+              title: Text(
+                'Clear All Data',
+                style: TextStyle(color: cs.onErrorContainer),
+                textAlign: TextAlign.center,
+              ),
+              leading: Icon(Icons.delete_outline, color: cs.error),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               onTap: _showClearDataDialog,
             ),
-          ]),
+          ),
 
           // ── About ──
-          _sectionHeader('ABOUT'),
+          _sectionHeader('About'),
           _groupCard([
             _detailRow(
               label: 'Version',
@@ -275,133 +265,98 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ── HIG-style building blocks ────────────────────────────────
+  // ── Building blocks ────────────────────────────────────────
 
-  /// Uppercase gray section header (HIG grouped list style).
   Widget _sectionHeader(String title) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(32, 24, 16, 6),
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 6),
       child: Text(
         title,
-        style: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w400,
-          color: Theme.of(context)
-              .colorScheme
-              .onSurface
-              .withValues(alpha: 0.45),
-          letterSpacing: 0.5,
-        ),
+        style: tt.labelLarge?.copyWith(color: cs.primary),
       ),
     );
   }
 
-  /// Rounded card that wraps a group of rows.
   Widget _groupCard(List<Widget> children) {
-    return Container(
+    final cs = Theme.of(context).colorScheme;
+
+    return Card(
+      color: cs.surfaceContainerHigh,
+      elevation: 0,
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.15),
-        ),
-      ),
       child: Column(children: children),
     );
   }
 
-  /// Thin inset divider between rows.
   Widget _divider() {
+    final cs = Theme.of(context).colorScheme;
+
     return Divider(
       height: 0.5,
       thickness: 0.5,
       indent: 16,
-      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.15),
+      endIndent: 16,
+      color: cs.outlineVariant,
     );
   }
 
-  /// Row with a switch on the right.
   Widget _switchRow({
     required String label,
     required bool value,
     required ValueChanged<bool> onChanged,
   }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(fontSize: 16),
-            ),
-          ),
-          Switch.adaptive(
-            value: value,
-            onChanged: onChanged,
-          ),
-        ],
-      ),
+    final tt = Theme.of(context).textTheme;
+
+    return SwitchListTile.adaptive(
+      title: Text(label, style: tt.bodyLarge),
+      value: value,
+      onChanged: onChanged,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
     );
   }
 
-  /// Row with a detail label on the right (like iOS disclosure style).
   Widget _detailRow({
     required String label,
     required String detail,
     VoidCallback? onTap,
     bool enabled = true,
   }) {
-    return InkWell(
-      onTap: enabled ? onTap : null,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: enabled
-                      ? Theme.of(context).colorScheme.onSurface
-                      : Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.35),
-                ),
-              ),
-            ),
-            Text(
-              detail,
-              style: TextStyle(
-                fontSize: 16,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.4),
-              ),
-            ),
-            if (onTap != null) ...[
-              const SizedBox(width: 4),
-              Icon(
-                Icons.chevron_right,
-                size: 20,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.25),
-              ),
-            ],
-          ],
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+
+    return ListTile(
+      title: Text(
+        label,
+        style: tt.bodyLarge?.copyWith(
+          color: enabled ? cs.onSurface : cs.onSurfaceVariant,
         ),
       ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            detail,
+            style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+          ),
+          if (onTap != null) ...[
+            const SizedBox(width: 4),
+            Icon(
+              Icons.chevron_right,
+              size: 20,
+              color: cs.onSurfaceVariant,
+            ),
+          ],
+        ],
+      ),
+      onTap: enabled ? onTap : null,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
     );
   }
 
-  /// Row with +/- stepper controls.
   Widget _stepperRow({
     required String label,
     required int value,
@@ -410,6 +365,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required bool enabled,
     required ValueChanged<int> onChanged,
   }) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: Row(
@@ -417,27 +375,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Expanded(
             child: Text(
               label,
-              style: TextStyle(
-                fontSize: 16,
-                color: enabled
-                    ? Theme.of(context).colorScheme.onSurface
-                    : Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.35),
+              style: tt.bodyLarge?.copyWith(
+                color: enabled ? cs.onSurface : cs.onSurfaceVariant,
               ),
             ),
           ),
-          // HIG-style stepper: rounded rect with ─ value +
           Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: Theme.of(context)
-                    .colorScheme
-                    .outline
-                    .withValues(alpha: 0.2),
-              ),
+              border: Border.all(color: cs.outlineVariant),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -452,10 +398,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   alignment: Alignment.center,
                   child: Text(
                     '$value',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.primary,
+                    style: tt.titleMedium?.copyWith(
+                      color: cs.primary,
                     ),
                   ),
                 ),
@@ -477,6 +421,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required bool enabled,
     required VoidCallback onTap,
   }) {
+    final cs = Theme.of(context).colorScheme;
+
     return GestureDetector(
       onTap: enabled ? onTap : null,
       child: Padding(
@@ -484,27 +430,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: Icon(
           icon,
           size: 18,
-          color: enabled
-              ? Theme.of(context).colorScheme.primary
-              : Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.15),
+          color: enabled ? cs.primary : cs.onSurfaceVariant,
         ),
       ),
     );
   }
 
-  /// HIG-style segmented theme picker (System / Light / Dark).
   Widget _themeRow() {
     final currentMode = _storage.getThemeMode();
+    final tt = Theme.of(context).textTheme;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Theme', style: TextStyle(fontSize: 16)),
+          Text('Theme', style: tt.bodyLarge),
           const SizedBox(height: 10),
           SizedBox(
             width: double.infinity,
@@ -555,55 +496,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  /// Red destructive row (like "Delete Account" in iOS Settings).
-  Widget _destructiveRow({
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.red.shade400,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   // ── Clear data dialog ────────────────────────────────────────
 
   void _showClearDataDialog() {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: const Text('Clear All Data?'),
-        content: const Text(
+        backgroundColor: cs.surfaceContainerHigh,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(28),
+        ),
+        title: Text('Clear All Data?', style: tt.headlineSmall),
+        content: Text(
           'This will permanently delete all periods, cycles, '
           'and log entries. This cannot be undone.',
+          style: tt.bodyMedium,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
-          TextButton(
+          FilledButton(
             onPressed: () async {
               Navigator.pop(context);
               await _clearAllData();
             },
-            child: Text(
-              'Delete',
-              style: TextStyle(color: Colors.red.shade400),
+            style: FilledButton.styleFrom(
+              backgroundColor: cs.error,
+              foregroundColor: cs.onError,
             ),
+            child: const Text('Delete'),
           ),
         ],
       ),
@@ -630,11 +556,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('All data cleared.'),
+        const SnackBar(
+          content: Text('All data cleared.'),
           behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );
     }

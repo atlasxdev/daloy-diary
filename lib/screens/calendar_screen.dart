@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 import '../core/theme.dart';
-import '../core/gradient_header.dart';
 import '../models/period.dart';
 import '../models/cycle.dart';
 import '../models/log_entry.dart';
@@ -12,12 +11,6 @@ import '../services/notification_service.dart';
 import '../services/cycle_prediction_service.dart';
 import 'log_entry_screen.dart';
 
-/// Calendar tab — month view with color-coded days.
-///
-/// HIG calendar guidance:
-///   - Clean grid with generous cell spacing
-///   - Semantic color only (not decorative)
-///   - Tapping a day shows a contextual action sheet
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
 
@@ -116,22 +109,22 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     showModalBottomSheet(
       context: context,
+      useSafeArea: true,
       isScrollControlled: true,
       builder: (context) {
+        final tt = Theme.of(context).textTheme;
+
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 4, 24, 24),
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Date header.
+                const SizedBox(height: 24),
                 Text(
                   _formatDate(day),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: -0.3,
-                      ),
+                  style: tt.titleLarge,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 16),
@@ -144,14 +137,36 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       spacing: 8,
                       children: [
                         if (isPeriod)
-                          _statusChip(
-                            'Period day',
-                            AppTheme.periodColor(context),
+                          FilterChip(
+                            label: Text('Period day'),
+                            selected: true,
+                            selectedColor: AppTheme.periodColor(context)
+                                .withValues(alpha: 0.2),
+                            side: BorderSide(
+                              color: AppTheme.periodColor(context),
+                              width: 1.5,
+                            ),
+                            labelStyle: tt.labelMedium?.copyWith(
+                              color: AppTheme.periodColor(context),
+                              fontWeight: FontWeight.w600,
+                            ),
+                            onSelected: (_) {},
                           ),
                         if (_isPredictedDay(day))
-                          _statusChip(
-                            'Predicted',
-                            AppTheme.predictedColor(context),
+                          FilterChip(
+                            label: Text('Predicted'),
+                            selected: true,
+                            selectedColor: AppTheme.predictedColor(context)
+                                .withValues(alpha: 0.2),
+                            side: BorderSide(
+                              color: AppTheme.predictedColor(context),
+                              width: 1.5,
+                            ),
+                            labelStyle: tt.labelMedium?.copyWith(
+                              color: AppTheme.predictedColor(context),
+                              fontWeight: FontWeight.w600,
+                            ),
+                            onSelected: (_) {},
                           ),
                       ],
                     ),
@@ -224,24 +239,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _statusChip(String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: color,
-        ),
-      ),
-    );
-  }
-
   Widget _actionButton({
     required IconData icon,
     required String label,
@@ -268,7 +265,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildLogsSummary(List<LogEntry> logs, SexualActivityLog? activityLog) {
+  Widget _buildLogsSummary(
+      List<LogEntry> logs, SexualActivityLog? activityLog) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+
     final symptoms =
         logs.where((l) => l.type == LogType.symptom).map((l) => l.value);
     final moods =
@@ -294,7 +295,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.08),
+        color: cs.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -310,7 +311,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   Expanded(
                     child: Text(
                       item.text,
-                      style: const TextStyle(fontSize: 13),
+                      style: tt.bodySmall,
                     ),
                   ),
                 ],
@@ -321,7 +322,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  // ── Period start / end logic (unchanged) ─────────────────────
+  // ── Period start / end logic ─────────────────────────────────
 
   Future<void> _startPeriod(DateTime day) async {
     final previousPeriod = _periods.isNotEmpty ? _periods.first : null;
@@ -416,42 +417,40 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     showModalBottomSheet(
       context: context,
+      useSafeArea: true,
       isScrollControlled: true,
       builder: (sheetContext) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
             final cs = Theme.of(context).colorScheme;
+            final tt = Theme.of(context).textTheme;
             final color = AppTheme.activityColor(context);
 
             return SafeArea(
               child: Padding(
                 padding: EdgeInsets.fromLTRB(
                   24,
-                  4,
+                  0,
                   24,
-                  24 + MediaQuery.of(context).viewInsets.bottom,
+                  32 + MediaQuery.of(context).viewInsets.bottom,
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    const SizedBox(height: 24),
                     Text(
                       existing != null
                           ? 'Edit Sexual Activity'
                           : 'Log Sexual Activity',
-                      style:
-                          Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: -0.3,
-                              ),
+                      style: tt.titleLarge,
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 6),
                     Text(
                       _formatDate(day),
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: cs.onSurface.withValues(alpha: 0.5),
+                      style: tt.bodySmall?.copyWith(
+                        color: cs.onSurfaceVariant,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -460,37 +459,77 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     // Protection type selector.
                     Text(
                       'Protection',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: cs.onSurface,
-                        letterSpacing: -0.2,
+                      style: tt.titleSmall?.copyWith(
+                        color: cs.onSurfaceVariant,
                       ),
                     ),
                     const SizedBox(height: 10),
                     Row(
                       children: [
                         Expanded(
-                          child: _protectionChip(
-                            label: 'Protected',
-                            icon: Icons.shield_outlined,
-                            isSelected:
+                          child: ChoiceChip(
+                            label: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.shield_outlined, size: 18),
+                                const SizedBox(width: 8),
+                                Text('Protected'),
+                              ],
+                            ),
+                            selected:
                                 selectedType == ProtectionType.protected,
-                            color: color,
-                            onTap: () => setSheetState(() {
+                            selectedColor: color.withValues(alpha: 0.2),
+                            side: BorderSide(
+                              color: selectedType == ProtectionType.protected
+                                  ? color
+                                  : cs.outlineVariant,
+                              width: selectedType == ProtectionType.protected
+                                  ? 1.5
+                                  : 1,
+                            ),
+                            labelStyle: tt.labelLarge?.copyWith(
+                              color: selectedType == ProtectionType.protected
+                                  ? color
+                                  : cs.onSurface,
+                            ),
+                            showCheckmark: false,
+                            onSelected: (_) => setSheetState(() {
                               selectedType = ProtectionType.protected;
                             }),
                           ),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
-                          child: _protectionChip(
-                            label: 'Unprotected',
-                            icon: Icons.remove_circle_outline,
-                            isSelected:
+                          child: ChoiceChip(
+                            label: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.remove_circle_outline, size: 18),
+                                const SizedBox(width: 8),
+                                Text('Unprotected'),
+                              ],
+                            ),
+                            selected:
                                 selectedType == ProtectionType.unprotected,
-                            color: color,
-                            onTap: () => setSheetState(() {
+                            selectedColor: color.withValues(alpha: 0.2),
+                            side: BorderSide(
+                              color:
+                                  selectedType == ProtectionType.unprotected
+                                      ? color
+                                      : cs.outlineVariant,
+                              width:
+                                  selectedType == ProtectionType.unprotected
+                                      ? 1.5
+                                      : 1,
+                            ),
+                            labelStyle: tt.labelLarge?.copyWith(
+                              color:
+                                  selectedType == ProtectionType.unprotected
+                                      ? color
+                                      : cs.onSurface,
+                            ),
+                            showCheckmark: false,
+                            onSelected: (_) => setSheetState(() {
                               selectedType = ProtectionType.unprotected;
                             }),
                           ),
@@ -502,11 +541,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     // Notes field.
                     Text(
                       'Notes',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: cs.onSurface,
-                        letterSpacing: -0.2,
+                      style: tt.titleSmall?.copyWith(
+                        color: cs.onSurfaceVariant,
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -515,65 +551,63 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       maxLines: 2,
                       decoration: InputDecoration(
                         hintText: 'Optional notes...',
-                        hintStyle: TextStyle(
-                          color: cs.onSurface.withValues(alpha: 0.3),
+                        hintStyle: tt.bodyMedium?.copyWith(
+                          color: cs.onSurfaceVariant,
                         ),
                         filled: true,
                         fillColor: cs.surfaceContainerHighest,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: cs.outline.withValues(alpha: 0.2),
-                          ),
+                          borderSide: BorderSide(color: cs.outlineVariant),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: cs.outline.withValues(alpha: 0.2),
-                          ),
+                          borderSide: BorderSide(color: cs.outlineVariant),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: color),
+                          borderSide: BorderSide(color: cs.outline),
                         ),
                       ),
                     ),
                     const SizedBox(height: 24),
 
                     // Save button.
-                    FilledButton(
-                      onPressed: selectedType == null
-                          ? null
-                          : () async {
-                              final notes =
-                                  notesController.text.trim().isNotEmpty
-                                      ? notesController.text.trim()
-                                      : null;
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: FilledButton(
+                        onPressed: selectedType == null
+                            ? null
+                            : () async {
+                                final nav = Navigator.of(context);
+                                final notes =
+                                    notesController.text.trim().isNotEmpty
+                                        ? notesController.text.trim()
+                                        : null;
 
-                              if (existing != null) {
-                                existing.protectionType = selectedType!;
-                                existing.notes = notes;
-                                await _storage
-                                    .updateSexualActivityLog(existing);
-                              } else {
-                                await _storage.addSexualActivityLog(
-                                  SexualActivityLog(
-                                    date: _dateOnly(day),
-                                    protectionType: selectedType!,
-                                    notes: notes,
-                                  ),
-                                );
-                              }
+                                if (existing != null) {
+                                  existing.protectionType = selectedType!;
+                                  existing.notes = notes;
+                                  await _storage
+                                      .updateSexualActivityLog(existing);
+                                } else {
+                                  await _storage.addSexualActivityLog(
+                                    SexualActivityLog(
+                                      date: _dateOnly(day),
+                                      protectionType: selectedType!,
+                                      notes: notes,
+                                    ),
+                                  );
+                                }
 
-                              if (mounted) {
-                                Navigator.pop(context);
-                                setState(() {});
-                              }
-                            },
-                      style: FilledButton.styleFrom(
-                        backgroundColor: color,
+                                if (mounted) {
+                                  nav.pop();
+                                  setState(() {});
+                                }
+                              },
+                        child: Text(existing != null ? 'Update' : 'Save'),
                       ),
-                      child: Text(existing != null ? 'Update' : 'Save'),
                     ),
 
                     // Delete button (only when editing).
@@ -581,20 +615,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       const SizedBox(height: 8),
                       TextButton(
                         onPressed: () async {
-                          await _storage
-                              .deleteSexualActivityLog(existing);
+                          final nav = Navigator.of(context);
+                          await _storage.deleteSexualActivityLog(existing);
                           if (mounted) {
-                            Navigator.pop(context);
+                            nav.pop();
                             setState(() {});
                           }
                         },
-                        child: Text(
-                          'Delete',
-                          style: TextStyle(
-                            color: cs.error,
-                            fontWeight: FontWeight.w500,
-                          ),
+                        style: TextButton.styleFrom(
+                          foregroundColor: cs.error,
                         ),
+                        child: const Text('Delete'),
                       ),
                     ],
                   ],
@@ -604,52 +635,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
           },
         );
       },
-    );
-  }
-
-  Widget _protectionChip({
-    required String label,
-    required IconData icon,
-    required bool isSelected,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    final cs = Theme.of(context).colorScheme;
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? color.withValues(alpha: 0.15)
-              : cs.outline.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? color : Colors.transparent,
-            width: 1.5,
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 18,
-              color: isSelected ? color : cs.onSurface.withValues(alpha: 0.5),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                color: isSelected ? color : cs.onSurface,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -663,8 +648,19 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   String _formatDate(DateTime day) {
     const months = [
-      '', 'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
+      '',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
     return '${months[day.month]} ${day.day}, ${day.year}';
   }
@@ -673,87 +669,93 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return GradientScaffold(
-      title: 'Calendar',
-      gradientHeight: 160,
-      child: Column(
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Calendar'),
+        centerTitle: false,
+      ),
+      body: Column(
         children: [
-          TableCalendar(
-            firstDay: DateTime(2020, 1, 1),
-            lastDay: DateTime(2030, 12, 31),
-            focusedDay: _focusedDay,
-            selectedDayPredicate: (day) =>
-                _selectedDay != null && isSameDay(_selectedDay, day),
-            onDaySelected: _onDaySelected,
-            onPageChanged: (focusedDay) => _focusedDay = focusedDay,
-            calendarStyle: CalendarStyle(
-              outsideDaysVisible: false,
-              todayDecoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: AppTheme.periodColor(context),
-                  width: 1.5,
+          Card(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: TableCalendar(
+                firstDay: DateTime(2020, 1, 1),
+                lastDay: DateTime(2030, 12, 31),
+                focusedDay: _focusedDay,
+                selectedDayPredicate: (day) =>
+                    _selectedDay != null && isSameDay(_selectedDay, day),
+                onDaySelected: _onDaySelected,
+                onPageChanged: (focusedDay) => _focusedDay = focusedDay,
+                calendarStyle: CalendarStyle(
+                  outsideDaysVisible: false,
+                  todayDecoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: cs.primary,
+                      width: 2,
+                    ),
+                  ),
+                  todayTextStyle: tt.titleSmall!.copyWith(
+                    color: cs.primary,
+                  ),
+                  selectedDecoration: BoxDecoration(
+                    color: cs.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  selectedTextStyle: tt.titleSmall!.copyWith(
+                    color: cs.onPrimary,
+                  ),
+                  defaultTextStyle: tt.bodyMedium!.copyWith(
+                    color: cs.onSurface,
+                  ),
+                  weekendTextStyle: tt.bodyMedium!.copyWith(
+                    color: cs.onSurface,
+                  ),
+                ),
+                headerStyle: HeaderStyle(
+                  formatButtonVisible: false,
+                  titleCentered: true,
+                  titleTextStyle: tt.titleMedium!.copyWith(
+                    color: cs.onSurface,
+                  ),
+                  leftChevronIcon: Icon(
+                    Icons.chevron_left,
+                    color: cs.onSurfaceVariant,
+                  ),
+                  rightChevronIcon: Icon(
+                    Icons.chevron_right,
+                    color: cs.onSurfaceVariant,
+                  ),
+                ),
+                daysOfWeekStyle: DaysOfWeekStyle(
+                  weekdayStyle: tt.labelMedium!.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
+                  weekendStyle: tt.labelMedium!.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
+                ),
+                calendarBuilders: CalendarBuilders(
+                  defaultBuilder: (context, day, focusedDay) =>
+                      _buildDayCell(day, isToday: false),
+                  todayBuilder: (context, day, focusedDay) =>
+                      _buildDayCell(day, isToday: true),
+                  selectedBuilder: (context, day, focusedDay) =>
+                      _buildDayCell(day, isToday: false, isSelected: true),
                 ),
               ),
-              todayTextStyle: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface,
-                fontWeight: FontWeight.w600,
-              ),
-              selectedDecoration: BoxDecoration(
-                color: AppTheme.periodColor(context),
-                shape: BoxShape.circle,
-              ),
-              selectedTextStyle: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-              defaultTextStyle: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-              weekendTextStyle: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            headerStyle: HeaderStyle(
-              formatButtonVisible: false,
-              titleCentered: true,
-              titleTextStyle: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurface,
-                letterSpacing: -0.3,
-              ),
-              leftChevronIcon: Icon(
-                Icons.chevron_left,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-              ),
-              rightChevronIcon: Icon(
-                Icons.chevron_right,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-              ),
-            ),
-            daysOfWeekStyle: DaysOfWeekStyle(
-              weekdayStyle: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-              ),
-              weekendStyle: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-              ),
-            ),
-            calendarBuilders: CalendarBuilders(
-              defaultBuilder: (context, day, focusedDay) =>
-                  _buildDayCell(day, isToday: false),
-              todayBuilder: (context, day, focusedDay) =>
-                  _buildDayCell(day, isToday: true),
-              selectedBuilder: (context, day, focusedDay) =>
-                  _buildDayCell(day, isToday: false, isSelected: true),
             ),
           ),
-          const Divider(indent: 16, endIndent: 16),
+          Divider(
+            indent: 16,
+            endIndent: 16,
+            color: cs.outlineVariant,
+          ),
           Expanded(child: _buildSummary()),
         ],
       ),
@@ -765,6 +767,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
     required bool isToday,
     bool isSelected = false,
   }) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
     final isPeriod = _isPeriodDay(day);
     final isPredicted = _isPredictedDay(day);
     final hasLog = _hasLogs(day);
@@ -772,20 +776,23 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     Color? bgColor;
     if (isSelected) {
-      bgColor = AppTheme.periodColor(context);
+      bgColor = cs.primary;
     } else if (isPeriod) {
       bgColor = AppTheme.periodLightColor(context);
     }
 
-    Color textColor = Theme.of(context).colorScheme.onSurface;
-    if (isSelected) textColor = Colors.white;
-    if (isPeriod && !isSelected) {
+    Color textColor = cs.onSurface;
+    if (isSelected) {
+      textColor = cs.onPrimary;
+    } else if (isPeriod) {
       textColor = AppTheme.periodColor(context);
+    } else if (isToday) {
+      textColor = cs.primary;
     }
 
     Border? border;
     if (isToday && !isSelected) {
-      border = Border.all(color: AppTheme.periodColor(context), width: 1.5);
+      border = Border.all(color: cs.primary, width: 2);
     }
 
     return Container(
@@ -800,44 +807,47 @@ class _CalendarScreenState extends State<CalendarScreen> {
         children: [
           Text(
             '${day.day}',
-            style: TextStyle(
+            style: tt.titleSmall?.copyWith(
               color: textColor,
-              fontSize: 14,
-              fontWeight: (isPeriod || isToday) ? FontWeight.w600 : FontWeight.w400,
+              fontWeight:
+                  (isPeriod || isToday) ? FontWeight.w600 : FontWeight.w400,
             ),
           ),
+          // Predicted: bottom-center.
           if (isPredicted && !isSelected)
             Positioned(
               bottom: 4,
               child: Container(
-                width: 5,
-                height: 5,
+                width: 4,
+                height: 4,
                 decoration: BoxDecoration(
                   color: AppTheme.predictedColor(context),
                   shape: BoxShape.circle,
                 ),
               ),
             ),
+          // Has logs: bottom-right.
           if (hasLog && !isSelected)
             Positioned(
-              top: 4,
-              right: 4,
+              bottom: 4,
+              right: 6,
               child: Container(
-                width: 5,
-                height: 5,
+                width: 4,
+                height: 4,
                 decoration: BoxDecoration(
                   color: AppTheme.logDotColor(context),
                   shape: BoxShape.circle,
                 ),
               ),
             ),
+          // Has activity: bottom-left.
           if (hasActivity && !isSelected)
             Positioned(
-              top: 4,
-              left: 4,
+              bottom: 4,
+              left: 6,
               child: Container(
-                width: 5,
-                height: 5,
+                width: 4,
+                height: 4,
                 decoration: BoxDecoration(
                   color: AppTheme.activityColor(context),
                   shape: BoxShape.circle,
@@ -850,6 +860,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Widget _buildSummary() {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
     final ongoing = _ongoingPeriod;
 
     return Padding(
@@ -859,26 +871,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
         children: [
           Text(
             'Summary',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.5),
-              letterSpacing: -0.2,
-            ),
+            style: tt.titleSmall?.copyWith(color: cs.onSurfaceVariant),
           ),
           const SizedBox(height: 10),
           if (_periods.isEmpty)
             Text(
               'Tap a date to log your first period.',
-              style: TextStyle(
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.4),
-              ),
+              style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
             )
           else ...[
             if (ongoing != null)
@@ -887,7 +886,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             else
               _summaryRow(
                 Icons.circle_outlined,
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                cs.onSurfaceVariant,
                 'No active period',
               ),
             const SizedBox(height: 6),
@@ -911,6 +910,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Widget _summaryRow(IconData icon, Color color, String text) {
+    final tt = Theme.of(context).textTheme;
+    final cs = Theme.of(context).colorScheme;
+
     return Row(
       children: [
         Icon(icon, color: color, size: 16),
@@ -918,10 +920,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         Expanded(
           child: Text(
             text,
-            style: TextStyle(
-              fontSize: 14,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+            style: tt.bodyMedium?.copyWith(color: cs.onSurface),
           ),
         ),
       ],

@@ -90,33 +90,23 @@ class AppTheme {
         ),
       ),
 
-      // ── Bottom nav: clean, minimal ──
-      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+      // ── Navigation bar (M3) ──
+      navigationBarTheme: NavigationBarThemeData(
         backgroundColor: isDark
             ? const Color(0xFF1C1B1F)
             : Colors.white,
-        selectedItemColor: colorScheme.primary,
-        unselectedItemColor: colorScheme.onSurface.withValues(alpha: 0.4),
-        type: BottomNavigationBarType.fixed,
+        indicatorColor: colorScheme.secondaryContainer,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         elevation: 0,
-        selectedLabelStyle: const TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w500,
-        ),
-        unselectedLabelStyle: const TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w400,
-        ),
       ),
 
-      // ── Cards: rounded, soft shadow, no border ──
+      // ── Cards: M3 tonal elevation, 12dp radius ──
       cardTheme: CardThemeData(
-        color: colorScheme.surfaceContainerHighest,
-        elevation: 1,
-        shadowColor: colorScheme.shadow.withValues(alpha: 0.08),
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        color: colorScheme.surfaceContainer,
+        elevation: 0,
+        margin: const EdgeInsets.symmetric(vertical: 6),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(12),
         ),
       ),
 
@@ -153,11 +143,11 @@ class AppTheme {
         thickness: 0.5,
       ),
 
-      // ── Bottom sheets: rounded top corners ──
+      // ── Bottom sheets: M3 28dp top radius ──
       bottomSheetTheme: BottomSheetThemeData(
-        backgroundColor: colorScheme.surfaceContainerHighest,
+        backgroundColor: colorScheme.surfaceContainerHigh,
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
         showDragHandle: true,
       ),
